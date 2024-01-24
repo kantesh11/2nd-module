@@ -6,6 +6,8 @@ pragma solidity ^0.8.9;
 contract Assessment {
     address payable public owner;
     uint256 public balance;
+    uint256 public transactionLimit;
+    string private pin;
 
     event Deposit(uint256 amount);
     event Withdraw(uint256 amount);
@@ -13,14 +15,38 @@ contract Assessment {
     constructor(uint initBalance) payable {
         owner = payable(msg.sender);
         balance = initBalance;
+        transactionLimit = 50 ether;
     }
 
-    function getBalance() public view returns(uint256){
+    function getBalance() public view returns (uint256) {
         return balance;
     }
 
+    function getTransactionLimit() public view returns (uint256) {
+        return transactionLimit;
+    }
+
+    function setTransactionLimit(uint256 _limit) public {
+        require(msg.sender == owner, "You are not the owner of this account");
+        transactionLimit = _limit;
+    }
+
+    function setPin(string memory _pin) public {
+        require(msg.sender == owner, "You are not the owner of this account");
+        pin = _pin;
+    }
+
+    function confirmPin(string memory _confirmedPin) public {
+        require(msg.sender == owner, "You are not the owner of this account");
+        require(keccak256(abi.encodePacked(pin)) == keccak256(abi.encodePacked(_confirmedPin)), "Pin and Confirm Pin must match");
+        // Additional logic for pin confirmation if needed
+    }
+
+    // custom error
+    error InsufficientBalance(uint256 balance, uint256 withdrawAmount);
+
     function deposit(uint256 _amount) public payable {
-        uint _previousBalance = balance;
+        uint256 _previousBalance = balance;
 
         // make sure this is the owner
         require(msg.sender == owner, "You are not the owner of this account");
@@ -35,12 +61,9 @@ contract Assessment {
         emit Deposit(_amount);
     }
 
-    // custom error
-    error InsufficientBalance(uint256 balance, uint256 withdrawAmount);
-
     function withdraw(uint256 _withdrawAmount) public {
         require(msg.sender == owner, "You are not the owner of this account");
-        uint _previousBalance = balance;
+        uint256 _previousBalance = balance;
         if (balance < _withdrawAmount) {
             revert InsufficientBalance({
                 balance: balance,
