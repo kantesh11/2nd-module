@@ -6,7 +6,6 @@ pragma solidity ^0.8.9;
 contract Assessment {
     address payable public owner;
     uint256 public balance;
-    uint256 public transactionLimit;
     string private pin;
 
     event Deposit(uint256 amount);
@@ -15,21 +14,12 @@ contract Assessment {
     constructor(uint initBalance) payable {
         owner = payable(msg.sender);
         balance = initBalance;
-        transactionLimit = 50 ether;
     }
 
     function getBalance() public view returns (uint256) {
         return balance;
     }
 
-    function getTransactionLimit() public view returns (uint256) {
-        return transactionLimit;
-    }
-
-    function setTransactionLimit(uint256 _limit) public {
-        require(msg.sender == owner, "You are not the owner of this account");
-        transactionLimit = _limit;
-    }
 
     function setPin(string memory _pin) public {
         require(msg.sender == owner, "You are not the owner of this account");
@@ -42,7 +32,6 @@ contract Assessment {
         // Additional logic for pin confirmation if needed
     }
 
-    // custom error
     error InsufficientBalance(uint256 balance, uint256 withdrawAmount);
 
     function deposit(uint256 _amount) public payable {
