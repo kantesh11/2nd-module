@@ -7,10 +7,9 @@ export default function HomePage() {
   const [account, setAccount] = useState(undefined);
   const [atm, setATM] = useState(undefined);
   const [balance, setBalance] = useState(undefined);
-  const [pin, setPin] = useState("");
-  const [confirmedPin, setConfirmedPin] = useState("");
-  const [transactionAmount, setTransactionAmount] = useState(1);
-  const [isPinSet, setIsPinSet] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [transactionHistory, setTransactionHistory] = useState([]);
 
   const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
   const atmABI = atm_abi.abi;
@@ -44,7 +43,7 @@ export default function HomePage() {
     const accounts = await ethWallet.request({ method: "eth_requestAccounts" });
     handleAccount(accounts);
 
-    // once the wallet is set we can get a reference to our deployed contract
+    // once wallet is set we can get a reference to our deployed contract
     getATMContract();
   };
 
@@ -63,124 +62,40 @@ export default function HomePage() {
   };
 
   const deposit = async () => {
-    if (atm) {
-      try {
-        // Check if pin is set before processing the deposit
-        if (!isPinSet) {
-          alert("Please set your PIN before making a transaction.");
-          return;
-        }
-
-        // Here you can add additional logic for pin verification with your smart contract
-        // For example, if there is a function verifyPin in your contract:
-        // const isPinVerified = await atm.verifyPin(pin);
-
-        // For the sake of this example, we're assuming the pin is verified successfully
-        const isPinVerified = true;
-
-        if (isPinVerified) {
-          let tx = await atm.deposit(transactionAmount);
-          await tx.wait();
-          getBalance();
-        } else {
-          alert("Invalid PIN. Please try again.");
-        }
-      } catch (error) {
-        console.error("Deposit error:", error);
-        alert("Error occurred during deposit. Please try again.");
-      }
+    if (atm && depositAmount !== "") {
+      let tx = await atm.deposit(parseInt(depositAmount));
+      await tx.wait();
+      getBalance();
+      updateTransactionHistory(`Deposited ${depositAmount} ETH`);
     }
   };
 
   const withdraw = async () => {
-    if (atm) {
-      try {
-        // Check if pin is set before processing the withdrawal
-        if (!isPinSet) {
-          alert("Please set your PIN before making a transaction.");
-          return;
-        }
-
-        // Here you can add additional logic for pin verification with your smart contract
-        // For example, if there is a function verifyPin in your contract:
-        // const isPinVerified = await atm.verifyPin(pin);
-
-        // For the sake of this example, we're assuming the pin is verified successfully
-        const isPinVerified = true;
-
-        if (isPinVerified) {
-          let tx = await atm.withdraw(transactionAmount);
-          await tx.wait();
-          getBalance();
-        } else {
-          alert("Invalid PIN. Please try again.");
-        }
-      } catch (error) {
-        console.error("Withdrawal error:", error);
-        alert("Error occurred during withdrawal. Please try again.");
-      }
+    if (atm && withdrawAmount !== "") {
+      let tx = await atm.withdraw(parseInt(withdrawAmount));
+      await tx.wait();
+      getBalance();
+      updateTransactionHistory(`Withdrawn ${withdrawAmount} ETH`);
     }
   };
 
-  const setPinAndConfirm = () => {
-    if (pin !== confirmedPin) {
-      alert("Pin and Confirm Pin must match");
-      return;
-    }
-
-    // Here you can call a contract function to set the pin.
-    // For example, if there is a function setPin in your contract:
-    // await atm.setPin(pin);
-
-    // For the sake of this example, we're just logging the pin.
-    console.log("Pin set:", pin);
-
-    setIsPinSet(true);
+  const updateTransactionHistory = (transaction) => {
+    setTransactionHistory([...transactionHistory, transaction]);
   };
 
-  const handleTransactionAmountChange = (event) => {
-    setTransactionAmount(event.target.value);
-  };
-
-  const handlePinChange = (event) => {
-    setPin(event.target.value);
-  };
-
-  const handleConfirmedPinChange = (event) => {
-    setConfirmedPin(event.target.value);
+  const clearTransactionHistory = () => {
+    setTransactionHistory([]);
   };
 
   const initUser = () => {
-    // Check to see if the user has Metamask
+    // Check to see if user has Metamask
     if (!ethWallet) {
-      return <p>Please install Metamask to use this ATM.</p>;
+      return <p>Please install Metamask in order to use this ATM.</p>;
     }
 
-    // Check to see if the user is connected. If not, connect to their account
+    // Check to see if user is connected. If not, connect to their account
     if (!account) {
-      return (
-        <div>
-          <button onClick={connectAccount}>Please connect your Metamask wallet</button>
-        </div>
-      );
-    }
-
-    if (!isPinSet) {
-      return (
-        <div>
-          <label>
-            Set PIN:
-            <input type="password" value={pin} onChange={handlePinChange} />
-          </label>
-          <br />
-          <label>
-            Confirm PIN:
-            <input type="password" value={confirmedPin} onChange={handleConfirmedPinChange} />
-          </label>
-          <br />
-          <button onClick={setPinAndConfirm}>Set PIN</button>
-        </div>
-      );
+      return <button onClick={connectAccount}>Please connect your Metamask wallet</button>;
     }
 
     if (balance === undefined) {
@@ -191,20 +106,25 @@ export default function HomePage() {
       <div>
         <p>Your Account: {account}</p>
         <p>Your Balance: {balance}</p>
-        <label>
-          Transaction Amount:
-          <input
-            type="number"
-            value={transactionAmount}
-            onChange={handleTransactionAmountChange}
-          />
-        </label>
-        <button onClick={deposit} disabled={!isPinSet}>
-          Deposit
-        </button>
-        <button onClick={withdraw} disabled={!isPinSet}>
-          Withdraw
-        </button>
+        <div>
+          <label>Deposit Amount:</label>
+          <input type="text" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} />
+          <button onClick={deposit}>Deposit</button>
+        </div>
+        <div>
+          <label>Withdraw Amount:</label>
+          <input type="text" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+          <button onClick={withdraw}>Withdraw</button>
+        </div>
+        <button onClick={clearTransactionHistory}>Clear History</button>
+        <div>
+          <h3>Transaction History:</h3>
+          <ul>
+            {transactionHistory.map((transaction, index) => (
+              <li key={index}>{transaction}</li>
+            ))}
+          </ul>
+        </div>
       </div>
     );
   };
@@ -222,10 +142,8 @@ export default function HomePage() {
       <style jsx>{`
         .container {
           text-align: center;
-          background-color: #d2b48c; /* Light Brown */
         }
       `}</style>
     </main>
   );
 }
-
